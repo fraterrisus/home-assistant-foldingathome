@@ -1,0 +1,16 @@
+{
+  "domain": "foldingathome",
+  "name": "Folding@Home",
+  "config_flow": true,
+  "documentation": "https://www.home-assistant.io/integrations/foldingathome",
+  "requirements": [
+    "fah_api==0.3-alpha"
+  ],
+  "ssdp": [],
+  "zeroconf": [],
+  "homekit": {},
+  "dependencies": [],
+  "codeowners": [
+    "@fraterrisus"
+  ]
+}

@@ -1,0 +1,13 @@
+set_idle:
+  description: Set the "only run if idle" mode of a slot.
+  fields:
+    idle:
+      description: A boolean.
+      example: true
+
+set_power:
+  description: Set the operating power of this FAH instance.
+  fields:
+    level:
+      description: The power level
+      example: "FULL"

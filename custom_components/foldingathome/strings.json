@@ -1,0 +1,20 @@
+{
+  "config": {
+    "error": {
+      "connection": "Unable to connect to that client.",
+      "password": "That password wasn't accepted by that client."
+    },
+    "step": {
+      "user": {
+        "data": {
+          "host": "Host",
+          "password": "Password",
+          "port": "Port"
+        },
+        "description": "You will need to configure the client to allow connections from the machine where HomeAssistant is running. We recommend setting a password.",
+        "title": "Connect to a Folding@Home client"
+      }
+    }
+  },
+  "title": "Folding@Home"
+}
