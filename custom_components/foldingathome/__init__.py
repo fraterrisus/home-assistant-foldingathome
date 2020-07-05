@@ -59,6 +59,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: config_entries.ConfigEnt
 
     config_data = hass.data[const.DOMAIN].get(const.ATTR_CONFIG)
 
+    # How do we build a Device that can encapsulate the host, and allow it to
+    # have multiple Entities for different FAH slots? That way we can configure
+    # a device's POWER setting
+
     for component in PLATFORMS:
         hass.async_create_task(
             hass.config_entries.async_forward_entry_setup(entry, component)

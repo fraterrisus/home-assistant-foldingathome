@@ -1,5 +1,6 @@
 import asyncio
 import fah_api
+import hashlib
 import logging
 import voluptuous as vol
 
@@ -45,7 +46,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_d
     slots = []
     for slot_id in range(0, num_slots):
         _LOGGER.info("building slot %d" % slot_id)
-        slots.append(FahSlot(host, slot_id, password))
+        slots.append(FahSlot(host, port, slot_id, password))
 
     if slots:
         async_add_devices(slots)
@@ -68,32 +69,67 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
 
 
 class FahSlot(SwitchEntity):
-    def __init__(self, host:str, slot_id:int, password:str = None):
+    def __init__(self, host:str, port:int, slot_id:int, password:str = None):
         self._API = fah_api.API(host=host, password=password)
-        self._description = None
-        self._is_idle = None
-        self._is_paused = None
+        self._host = host
+        self._port = port
         self._queue_info = {}
+        self._slot_info = {}
         self._slot_id = slot_id
+
+    # Properties
+
+    @property
+    def device_class(self) -> str:
+        return 'switch'
+
+    @property
+    def device_state_attributes(self) -> dict:
+        return {
+            const.CONF_HOST: self._host,
+            const.CONF_PORT: self._port,
+            const.ATTR_DESCRIPTION: self._slot_info.get('description'),
+            const.ATTR_PERCENT_DONE: self.percentdone(),
+            const.ATTR_SLOT_ID: self._slot_id
+        }
+
+    @property
+    def friendly_name(self) -> str:
+        return "Folding@Home %s Slot %d" % (self._host, self._slot_id)
 
     @property
     def is_on(self) -> bool:
-        return not self._is_paused
+        return not self.paused()
 
     @property
-    def percentdone(self) -> float:
-        if 'percentdone' in self._queue_info:
-            return float(str.replace(self._queue_info, '%', ''))
-        else:
-            return None
+    def name(self) -> str:
+        """Name of the device"""
+        return "folding-%s-slot-%d" % (self._host, self._slot_id)
 
     @property
     def should_poll(self) -> bool:
         return True
 
     @property
-    def slot_id(self) -> int:
-        return self._slot_id
+    def unique_id(self) -> str:
+        id = 'foldingathome:%s:%d:%d' % (self._host, self._port, self._slot_id)
+        return hashlib.md5(id.encode()).hexdigest()
+
+    # Attributes
+
+    def paused(self) -> bool:
+        slot_options = self._slot_info.get('options')
+        if slot_options is None:
+            return True
+        return slot_options.get(const.ATTR_PAUSED) == 'true'
+
+    def percentdone(self) -> float:
+        percentdone = self._queue_info.get(const.ATTR_PERCENT_DONE)
+        if percentdone is not None:
+            percentdone = float(str.replace(percentdone, '%', ''))
+        return percentdone
+
+    # Services
 
     async def async_turn_on(self, **kwargs) -> None:
         """Unpause the slot."""
@@ -104,18 +140,13 @@ class FahSlot(SwitchEntity):
         self._API.pause(self._slot_id)
 
     async def async_update(self) -> None:
-        """Read slot info and update state."""
-        _LOGGER.info('async_update(%s,%d,%d)' % self._host, self._port, self._slot_id)
-
+        """Read slot info and update in-memory state."""
         slots_info = self._API.slot_info()
         slot_info = [s for s in slots_info if int(s['id']) == self._slot_id]
-        if len(slot_info) != 1:
-            raise Exception
-        slot_info = slot_info[0]
-
-        self._is_paused = bool(slot_info['options']['paused'])
-        self._is_idle = bool(slot_info['idle'])
-        self._description = slot_info['description']
+        if len(slot_info) == 0:
+            self._slot_info = {}
+        else:
+            self._slot_info = slot_info[0]
 
         queues_info = self._API.queue_info()
         queue_info = [q for q in queues_info if int(q['slot']) == self._slot_id]

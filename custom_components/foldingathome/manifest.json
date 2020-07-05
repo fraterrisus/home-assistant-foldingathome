@@ -2,7 +2,7 @@
   "domain": "foldingathome",
   "name": "Folding@Home",
   "config_flow": true,
-  "documentation": "https://www.home-assistant.io/integrations/foldingathome",
+  "documentation": "https://github.com/fraterrisus/home-assistant-foldingathome",
   "requirements": [
     "fah_api==0.3-alpha"
   ],

@@ -17,7 +17,11 @@ from homeassistant.const import (
     CONF_PORT,
 )
 CONF_CLIENTS = 'clients'
-CONF_SLOT_ID = 'slot_id'
+
+ATTR_DESCRIPTION = 'description'
+ATTR_PAUSED = 'paused'
+ATTR_PERCENT_DONE = 'percentdone'
+ATTR_SLOT_ID = 'slot_id'
 
 SERVICE_SET_IDLE = 'set_idle'
 SERVICE_SET_POWER = 'set_power'
