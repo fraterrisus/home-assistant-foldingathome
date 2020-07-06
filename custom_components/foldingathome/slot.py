@@ -6,9 +6,8 @@ import voluptuous as vol
 
 import homeassistant.helpers.config_validation as cv
 
-from homeassistant.components.switch import PLATFORM_SCHEMA, SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity import Entity
+from homeassistant.components.sensor import PLATFORM_SCHEMA
 
 from . import const
 
@@ -20,55 +19,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(const.CONF_PORT): vol.Coerce(int)
 })
 
-async def async_setup_platform(
-    hass: HomeAssistant,
-    config: ConfigEntry,
-    async_add_entities,
-    discovery_info=None):
-    """Set up Folding@Home slots from config."""
-    _LOGGER.info('async_setup_platform()')
-
-    return True
-
-
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_devices):
-    _LOGGER.info('async_setup_entry()')
-    _LOGGER.info(entry.as_dict())
-
-    config = entry.data
-    _LOGGER.info(config)
-    host = config[const.CONF_HOST]
-    port = config[const.CONF_PORT]
-    password = config[const.CONF_PASSWORD]
-
-    api = fah_api.API(host=host, password=password)
-    num_slots = api.num_slots()
-    slots = []
-    for slot_id in range(0, num_slots):
-        _LOGGER.info("building slot %d" % slot_id)
-        slots.append(FahSlot(host, port, slot_id, password))
-
-    if slots:
-        async_add_devices(slots)
-
-
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Unload a config entry."""
-    unload_ok = all(
-        await asyncio.gather(
-            *[
-                hass.config_entries.async_forward_entry_unload(entry, component)
-                for component in PLATFORMS
-            ]
-        )
-    )
-    if unload_ok:
-        hass.data[const.DOMAIN].pop(entry.entry_id)
-
-    return unload_ok
-
-
-class FahSlot(SwitchEntity):
+class FahSlot(Entity):
     def __init__(self, host:str, port:int, slot_id:int, password:str = None):
         self._API = fah_api.API(host=host, password=password)
         self._host = host
@@ -80,22 +31,34 @@ class FahSlot(SwitchEntity):
     # Properties
 
     @property
-    def device_class(self) -> str:
-        return 'switch'
+    def device_info(self) -> dict:
+        return {
+            "identifiers": {
+                (const.DOMAIN, self._host, self._port)
+            },
+            "name": "%s:%d" % (self._host, self._port),
+            "entry_type": 'service',
+            "manufacturer": 'Folding@Home'
+        }
 
     @property
     def device_state_attributes(self) -> dict:
         return {
             const.CONF_HOST: self._host,
             const.CONF_PORT: self._port,
-            const.ATTR_DESCRIPTION: self._slot_info.get('description'),
+            const.ATTR_ASSIGNED_DATE: self._queue_info.get(const.ATTR_ASSIGNED_DATE),
+            const.ATTR_CREDIT: self._queue_info.get(const.ATTR_CREDIT),
+            const.ATTR_DEADLINE: self._queue_info.get(const.ATTR_DEADLINE),
+            const.ATTR_DESCRIPTION: self._slot_info.get(const.ATTR_DESCRIPTION),
+            const.ATTR_ESTIMATED_COMPLETION: self._queue_info.get(const.ATTR_ESTIMATED_COMPLETION),
             const.ATTR_PERCENT_DONE: self.percentdone(),
+            const.ATTR_PROJECT: self._queue_info.get(const.ATTR_PROJECT),
             const.ATTR_SLOT_ID: self._slot_id
         }
 
     @property
     def friendly_name(self) -> str:
-        return "Folding@Home %s Slot %d" % (self._host, self._slot_id)
+        return "%s slot %d" % (self._host, self._slot_id)
 
     @property
     def is_on(self) -> bool:
@@ -103,7 +66,6 @@ class FahSlot(SwitchEntity):
 
     @property
     def name(self) -> str:
-        """Name of the device"""
         return "folding-%s-slot-%d" % (self._host, self._slot_id)
 
     @property
@@ -111,11 +73,20 @@ class FahSlot(SwitchEntity):
         return True
 
     @property
+    def state(self) -> str:
+        return self.status()
+
+    @property
     def unique_id(self) -> str:
         id = 'foldingathome:%s:%d:%d' % (self._host, self._port, self._slot_id)
         return hashlib.md5(id.encode()).hexdigest()
 
-    # Attributes
+    # Attribute helpers
+
+    def client_info(self) -> dict:
+        data = self._API.info()
+        return { data[i][0] : self.transpose_dict(data[i][1:])
+            for i in range(0, len(data)) }
 
     def paused(self) -> bool:
         slot_options = self._slot_info.get('options')
@@ -129,15 +100,16 @@ class FahSlot(SwitchEntity):
             percentdone = float(str.replace(percentdone, '%', ''))
         return percentdone
 
+    def status(self) -> str:
+        status = self._slot_info.get('status')
+        if status is None:
+            status = 'NOTFOUND'
+        return status
+
+    def transpose_dict(self, data:list) -> dict:
+        return dict(zip([s[0] for s in data], [s[1] for s in data]))
+
     # Services
-
-    async def async_turn_on(self, **kwargs) -> None:
-        """Unpause the slot."""
-        self._API.unpause(self._slot_id)
-
-    async def async_turn_off(self, **kwargs) -> None:
-        """Pause the slot."""
-        self._API.pause(self._slot_id)
 
     async def async_update(self) -> None:
         """Read slot info and update in-memory state."""

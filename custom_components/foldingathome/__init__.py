@@ -1,14 +1,17 @@
 """The Folding@Home integration."""
 import asyncio
+import fah_api
 import logging
 import voluptuous as vol
 
 import homeassistant.helpers.config_validation as cv
 
 from homeassistant import config_entries
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 
 from . import const
+from .services import FahServices
+from .slot import FahSlot
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,11 +30,12 @@ CONFIG_SCHEMA = vol.Schema({
     }
 }, extra=vol.ALLOW_EXTRA)
 
-PLATFORMS = ["switch"]
+PLATFORMS = ["sensor"]
 
 async def async_setup(hass: HomeAssistant, config: dict):
     """Set up the Folding@Home component."""
     _LOGGER.info("async_setup()")
+    _LOGGER.info(config)
 
     conf = config.get(const.DOMAIN)
     hass.data[const.DOMAIN] = {}
@@ -59,9 +63,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: config_entries.ConfigEnt
 
     config_data = hass.data[const.DOMAIN].get(const.ATTR_CONFIG)
 
-    # How do we build a Device that can encapsulate the host, and allow it to
-    # have multiple Entities for different FAH slots? That way we can configure
-    # a device's POWER setting
+    api = fah_api.API()
+    services = FahServices(hass, api)
+    services.async_register()
 
     for component in PLATFORMS:
         hass.async_create_task(

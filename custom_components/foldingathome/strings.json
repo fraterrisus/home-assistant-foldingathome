@@ -1,8 +1,9 @@
 {
   "config": {
     "error": {
-      "connection": "Unable to connect to that client.",
-      "password": "That password wasn't accepted by that client."
+      "connection": "Unable to connect to the host. Is it running?",
+      "hostname": "Host not found. Check the name or IP address and try again.",
+      "password": "That password was rejected by the host."
     },
     "step": {
       "user": {

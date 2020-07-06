@@ -1,6 +1,8 @@
 set_idle:
   description: Set the "only run if idle" mode of a slot.
   fields:
+    slot_id:
+      description: The slot to set the idle flag.
     idle:
       description: A boolean.
       example: true

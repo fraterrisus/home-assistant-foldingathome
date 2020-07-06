@@ -49,12 +49,14 @@ class FoldingConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
         if user_input is not None:
             _LOGGER.info(user_input)
 
-            api = fah_api.API(host=user_input['host'], port=user_input['port'], password=user_input['password'])
+            api = fah_api.API(host=user_input['host'], port=user_input.get('port'), password=user_input.get('password'))
             try:
                 api.info()
                 return self.async_create_entry(title=user_input['host'], data=user_input)
             except fah_api.errors.AuthException:
                 errors['base'] = 'password'
+            except fah_api.errors.HostException:
+                errors['base'] = 'hostname'
             except fah_api.errors.FahException:
                 errors['base'] = 'connection'
 
