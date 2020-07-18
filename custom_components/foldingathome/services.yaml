@@ -1,15 +1,33 @@
-set_idle:
+set_slot_idle_flag:
   description: Set the "only run if idle" mode of a slot.
   fields:
-    slot_id:
-      description: The slot to set the idle flag.
+    entity_id:
+      description: The target slot entity. May be a list.
+      example: sensor.folding_127_0_0_1_slot_0
     idle:
       description: A boolean.
       example: true
 
-set_power:
-  description: Set the operating power of this FAH instance.
+pause_slot:
+  description: Set the "paused by user" flag on a slot.
   fields:
+    entity_id:
+      description: The target slot entity. May be a list.
+      example: sensor.folding_127_0_0_1_slot_0
+
+unpause_slot:
+  description: Clear the "paused by user" flag on a slot.
+  fields:
+    entity_id:
+      description: The target slot entity. May be a list.
+      example: sensor.folding_127_0_0_1_slot_0
+
+set_power:
+  description: Set the operating power of an instance.
+  fields:
+    entity_id:
+      description: The target host entity. May be a list.
+      example: sensor.folding_127_0_0_1
     level:
-      description: The power level
+      description: "The power level: LIGHT, MEDIUM, or FULL."
       example: "FULL"

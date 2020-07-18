@@ -63,14 +63,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: config_entries.ConfigEnt
 
     config_data = hass.data[const.DOMAIN].get(const.ATTR_CONFIG)
 
-    api = fah_api.API()
-    services = FahServices(hass, api)
-    services.async_register()
+    hass.data[const.DOMAIN][const.CONF_HOSTS] = []
+    hass.data[const.DOMAIN][const.CONF_SLOTS] = []
 
     for component in PLATFORMS:
         hass.async_create_task(
             hass.config_entries.async_forward_entry_setup(entry, component)
         )
+
+    services = FahServices(hass)
+    await hass.async_add_executor_job(services.register_services)
 
     return True
 

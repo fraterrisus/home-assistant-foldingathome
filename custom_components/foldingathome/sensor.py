@@ -1,5 +1,4 @@
 import asyncio
-import fah_api
 import hashlib
 import logging
 import voluptuous as vol
@@ -8,11 +7,12 @@ import homeassistant.helpers.config_validation as cv
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_platform
 from homeassistant.helpers.config_validation import PLATFORM_SCHEMA
 
 from . import const
+from .host import FahHost
 from .slot import FahSlot
-
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,22 +37,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_d
 
     config = entry.data
     _LOGGER.info(config)
-    host = config[const.CONF_HOST]
+    hostname = config[const.CONF_HOST]
     port = config[const.CONF_PORT]
     password = config[const.CONF_PASSWORD]
 
-    api = fah_api.API(host=host, password=password)
-    num_slots = api.num_slots()
+    host = FahHost(hostname=hostname, port=port, password=password)
+    num_slots = host.num_slots()
+    async_add_devices([host])
+    hass.data[const.DOMAIN]['host_entities'].append(host)
 
     slots = []
     for slot_id in range(0, num_slots):
         _LOGGER.info("building slot %d" % slot_id)
-        slot = FahSlot(host, port, slot_id, password)
-        # await slot.async_update()
+        slot = FahSlot(slot_id=slot_id, host=host)
         slots.append(slot)
 
     if slots:
+        hass.data[const.DOMAIN]['slot_entities'].extend(slots)
         async_add_devices(slots)
+
+    _LOGGER.info(hass.data[const.DOMAIN])
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
@@ -67,5 +71,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     )
     if unload_ok:
         hass.data[const.DOMAIN].pop(entry.entry_id)
+        # TODO: remove entity from slot_entities and host_entities
 
     return unload_ok
