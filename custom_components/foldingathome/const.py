@@ -20,6 +20,7 @@ ATTR_PAUSED_REASON = 'paused_reason'
 ATTR_PERCENT_DONE = 'percentdone'
 ATTR_PROJECT = 'project'
 ATTR_SLOT_ID = 'slot_id'
+ATTR_WORKUNIT = 'workunit'
 
 from homeassistant.const import (
     CONF_HOST,
